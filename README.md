@@ -52,15 +52,15 @@ Every piece of that is the skill working. The dependency audit found the fan-out
 With the [skills](https://github.com/vercel-labs/skills) CLI:
 
 ```bash
-npx skills add https://github.com/VineeTagarwaL-code/graph-engineering-skill
+npx skills add https://github.com/VineeTagarwaL-code/graph-engineering
 ```
 
 Or copy it in manually. Note the repo is named `graph-engineering-skill` but the skill directory must be named `graph-orchestrator` to match the skill's `name`:
 
 ```bash
-git clone https://github.com/VineeTagarwaL-code/graph-engineering-skill
+git clone https://github.com/VineeTagarwaL-code/graph-engineering
 mkdir -p ~/.claude/skills/
-cp -r graph-engineering-skill ~/.claude/skills/graph-orchestrator
+cp -r graph-engineering ~/.claude/skills/graph-orchestrator
 ```
 
 For a single project instead of globally, use `.claude/skills/` inside the repo.
