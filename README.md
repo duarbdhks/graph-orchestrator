@@ -2,9 +2,7 @@
   <img src="assets/banner.png" alt="Graph Engineering" width="100%" />
 </p>
 
-# Graph Orchestrator
-
-**A Claude agent skill that plans multi-step work as a dependency graph instead of a linear chain.**
+**A skill that plans multi-step work as a dependency graph instead of a linear chain.**
 
 No framework. No runner. No dependencies. Just instructions that change how the model plans: which work fans out to parallel subagents, which must wait, where results consolidate before they overflow, and which single node stops for a human.
 
