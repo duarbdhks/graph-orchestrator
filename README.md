@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.jpg" alt="Graph Engineering" width="100%" />
+</p>
+
 # Graph Orchestrator
 
 **A Claude agent skill that plans multi-step work as a dependency graph instead of a linear chain.**
