@@ -94,5 +94,13 @@
   {
     "query": "Commit the staged changes with a conventional message. Don't touch anything else.",
     "should_trigger": false
+  },
+  {
+    "query": "Deploy this one service to production after I confirm.",
+    "should_trigger": false
+  },
+  {
+    "query": "What is a dependency graph, in one paragraph?",
+    "should_trigger": false
   }
 ]

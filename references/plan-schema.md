@@ -1,6 +1,8 @@
 # Machine-Readable Plan Format
 
-Emit this **only** when the plan is being handed to an external runner: a scheduler, a CI job, another agent. For a human reader it's noise; use the markdown phase plan in `SKILL.md` instead.
+The markdown `## Graph` in `SKILL.md` and this JSON are the same model. Phases in either format are a derived schedule of that graph, not a second source of truth.
+
+Emit this JSON **only** when the plan is being handed to an external runner: a scheduler, a CI job, another agent. For a human reader it's noise; use the markdown graph in `SKILL.md` instead.
 
 Important: nothing in this schema executes on its own. Fields like `max_concurrency` are instructions *to a runner you have written*. If no such runner exists, omit runner-enforced fields rather than emitting values that imply a scheduler is enforcing them.
 

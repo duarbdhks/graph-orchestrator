@@ -2,7 +2,22 @@
 
 Read this before a fan-out. The schemas here are the source of truth. `SKILL.md` states the rule; this file states the shape.
 
-Workers write files. The parent keeps an artifact ref and a short summary, not the item body. Fan-in reduces records of the same shape. Completeness is a ledger aggregate, not a mental count.
+Context is not state. Shared state is these files, not the orchestrator's window.
+
+## Terms
+
+| Term | Meaning |
+|---|---|
+| recon | Bounded listing: items, shared resources, write locks, rubric, worker shape |
+| cardinality | How many instances of a node run |
+| ledger | The only runtime state for items. `ledger.jsonl` |
+| parent return | `item_id`, `status`, `artifact_ref`, summary ≤ 3 lines |
+| gate | `verify` or `approval`. A control stop, not data flow |
+| write_lock | Single-writer bound on one path. Not an edge |
+| fan-in | Join over a cardinality group. Ready when ledger expected vs received is honest |
+| rubric | Shared success criteria for every item in the group |
+
+`requires` is ready when the named outputs are ledger `done`. That is readiness. Completeness at fan-in is the join. Do not add fields for either.
 
 ## Artifact layout
 
@@ -30,7 +45,7 @@ artifact_ref    # path to the item file
 summary         # at most 3 lines; keep paths, names, quantities
 ```
 
-The item body stays in the file. Returning the full analysis to the parent is how this skill loses its reason to exist.
+The item body stays in the file.
 
 ## Item file
 
@@ -91,16 +106,21 @@ Batch summaries (`summaries/<batch-id>.json`) keep item ids, counts, and concret
 | `evidence_refs` | Source locators worth keeping (`path:line`, URL). |
 | `error` | Short error on `failed` / `blocked`, else `null`. |
 
-Update points:
+### Status mapping
 
-- before dispatch: `running`, `attempt += 1`
-- on worker return: `done` or `failed`, set `output_ref`
-- missing dependency: `blocked`, set `error`
-- before every fan-in: expected ids vs ledger ids in `done` / `failed` / `blocked`
+Worker `status` and ledger `status` are different vocabularies. Map them; do not copy the worker value onto the ledger.
 
-A line of `38/40` with two named missing ids is a ledger query. Do not synthesize over unnamed gaps.
+| Moment / worker `status` | Ledger `status` |
+|---|---|
+| before first dispatch | `pending` |
+| dispatch | `running`, `attempt += 1` |
+| `ok` | `done`, set `output_ref` |
+| `failed` | `failed`, set `output_ref` |
+| `blocked` | `blocked`, set `error` |
 
-If `scripts/validate-results.py` exists, run it at fan-in with the expected id list and the item JSONL (or a JSONL of the item files). If it does not exist, do the same check by hand.
+Before every fan-in: expected ids vs ledger ids in `done` / `failed` / `blocked`. A line of `38/40` with two named missing ids is a valid ledger query and a valid join result. Do not invent the two missing bodies in prose. Do not start semantic verification until every expected id is `done`, `failed`, or `blocked`.
+
+If `scripts/validate-results.py` exists, run it at fan-in with the expected id list and the **item** JSONL (or a JSONL of the item files). Do not pass `ledger.jsonl` to that script: ledger statuses are not `ok|failed|blocked`. If the script does not exist, do the same expected-vs-received check from the ledger by hand.
 
 ## What this file is not
 
