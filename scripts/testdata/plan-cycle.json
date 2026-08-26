@@ -1,0 +1,21 @@
+{
+  "goal": "Cyclic plan should fail validation",
+  "nodes": [
+    {
+      "id": "a",
+      "description": "Node A",
+      "requires": ["b.output"],
+      "executor": "inline"
+    },
+    {
+      "id": "b",
+      "description": "Node B",
+      "requires": ["a.output"],
+      "executor": "inline"
+    }
+  ],
+  "edges": [
+    { "from": "a", "to": "b", "reason": "A feeds B" },
+    { "from": "b", "to": "a", "reason": "B feeds A" }
+  ]
+}

@@ -2,6 +2,8 @@
 
 Read this when a plan is unusually large, or when diagnosing why a previous run degraded.
 
+Trigger conditions live in `SKILL.md`'s description. This file is sizing, a worked example, and failure modes — not a second trigger list.
+
 ## Contents
 
 - [A worked example](#a-worked-example)
@@ -15,29 +17,39 @@ Read this when a plan is unusually large, or when diagnosing why a previous run 
 
 **Request:** "Audit our 60-endpoint API for auth issues and give me a prioritized remediation plan."
 
+### Recon (stop here)
+
+Shared auth middleware is a known file. The item list is the 60 handlers. Rubric: "correct auth" means the handler uses the shared middleware or documents an exception. Worker shape: the item file in `references/execution-contract.md`. No per-handler analysis yet.
+
 ### Dependency audit
 
-| Step | Reads prior output? | Verdict |
-|---|---|---|
-| Read each endpoint's handler | No, each is independent input | Parallel, 60 items |
-| Identify the shared auth middleware | No, separate file, known upfront | Parallel with the above |
-| Classify each endpoint's auth posture | Yes, needs handler + middleware behavior | Depends on both |
-| Cluster findings by issue type | Yes, needs all classifications | Depends on classification |
-| Prioritize remediation | Yes, needs clusters | Depends on clustering |
+| Step | Reads prior output? | Kind | Verdict |
+|---|---|---|---|
+| List handlers + read middleware | No | recon | Inline, then stop recon |
+| Read each endpoint's handler | No, each is independent input | dependency: none | Parallel, 60 items |
+| Classify each endpoint's auth posture | Yes, needs handler + middleware | dependency | Depends on both |
+| Cluster findings by issue type | Yes, needs all classifications | dependency | Depends on classification |
+| Prioritize remediation | Yes, needs clusters | dependency | Depends on clustering |
+| Verify | Yes, needs claims + sources | gate | After consolidation |
+| API client, 5 concurrent | No | constraint | Width cap, not an edge |
 
-Hidden edges: the middleware read must complete before classification, because classification interprets each handler *relative* to middleware defaults. That's a real edge, easy to miss. It looks like independent reading.
+The middleware read is a real dependency for classification, because classification interprets each handler *relative* to middleware defaults. Rate limits on the repo host, if any, are a concurrency constraint — they do not order handler A before handler B.
 
 ### Phases
 
 ```
+Phase 0 (inline)       recon + rubric + artifact root
 Phase 1 (parallel)     60 handler reads + 1 middleware read
+                       workers write item files; parent keeps refs + 3-line summaries
 Phase 2 (parallel)     60 classifications, batches of 20
-Phase 3 (fan-in)       3 batch summaries → 1 clustering
+Phase 3 (fan-in)       3 batch summaries → 1 clustering; completeness from the ledger
 Phase 4 (sequential)   prioritization
-Phase 5 (verify)       re-check the 5 highest-severity findings against source
+Phase 5 (verify)       deterministic (60 in / 60 out, schema)
+                       semantic: all Critical + top High, re-derived from source
+                       sampling: a few ok / Low / Medium items
 ```
 
-Note what phase 5 does: it re-reads the actual handler for the top findings rather than reviewing the summary. A critique pass over your own synthesis tends to ratify it.
+Note what phase 5 does not do: it does not only re-read the five loudest findings, and it does not critique the synthesis. A systematic miss in Medium would survive a top-5 pass.
 
 ### What the naive version looks like
 
@@ -49,19 +61,27 @@ Note what phase 5 does: it re-reads the actual handler for the top findings rath
 
 **Fan-in flattening.** The single most common one. Symptom: the final output is detailed about early items and vague about later ones. Cause: one synthesis step over too many inputs. Fix: layer at 20 to 30, and require concrete specifics in each layer.
 
-**Phantom parallelism.** Declaring items independent when they share mutable state. Symptom: conflicting edits, or later items contradicting earlier ones. Fix: run the hidden-edge check, especially for anything that writes.
+**Context stuffing.** Symptom: the orchestrator is summarizing 60 full worker essays. Cause: workers returned bodies instead of artifact refs. Fix: write the item file, return ref + 3-line summary. See `references/execution-contract.md`.
 
-**The completeness gap.** Fan-in over 38 of 40 items, silently. Symptom: nothing, and that's the problem. Fix: count expected vs. received at every fan-in and name what's missing.
+**Phantom parallelism.** Declaring items independent when they share mutable state. Symptom: conflicting edits, or later items contradicting earlier ones. Fix: classify coupling; put a `write_lock` on the shared path.
+
+**Constraint promoted to edge.** Symptom: twenty independent API calls run as a chain of twenty because the API allows five at a time. Fix: keep them parallel and set `concurrency` to 5.
+
+**The completeness gap.** Fan-in over 38 of 40 items, silently. Symptom: nothing, and that's the problem. Fix: count expected vs. received from the ledger and name what's missing.
+
+**Top-N verification bias.** Symptom: Critical/High look solid; Low/Medium are systematically wrong. Cause: only the loudest findings were re-derived. Fix: three-stage verification in `references/verification.md`.
 
 **Plan drift.** By phase 4 you're working from a mental model that no longer matches the plan. Symptom: work that doesn't feed anything downstream. Fix: restate the phase's dependency in one line at each boundary.
 
-**Over-planning.** A 12-node graph for a task that was four sequential steps. Symptom: the plan is longer than the work. Fix: apply the threshold. No fan-out and fewer than ~6 subtasks means no formal plan.
+**Over-planning.** A 12-node graph for a task that was four sequential steps. Symptom: the plan is longer than the work. Fix: no meaningful fan-out means no formal plan.
 
 **Batch abandonment.** One item errors and the whole phase halts, discarding completed work. Fix: record the failure, continue, report it at consolidation.
 
 ---
 
 ## Sizing guidance
+
+These numbers size a run. They are not trigger thresholds. Whether to invoke the skill is the description in `SKILL.md`.
 
 | Scale | Approach |
 |---|---|
@@ -79,4 +99,5 @@ That last row matters more than it looks. A request to "analyze all 400 files" i
 - **Exploratory work.** When each step's result determines what the next step even *is*, you can't plan the graph upfront. Work adaptively and plan a graph once the shape is known.
 - **Genuinely sequential pipelines.** Extract → transform → load is a chain. Drawing it as a DAG adds nothing.
 - **Single-artifact work.** Writing one document, fixing one bug. The overhead exceeds the benefit.
+- **Mechanical bulk edits.** Renaming a symbol across a dozen files is a search-and-replace, not a fan-out with a rubric.
 - **When the user asked a question.** Not everything is a workflow. A question wants an answer.

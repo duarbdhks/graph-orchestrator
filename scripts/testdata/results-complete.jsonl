@@ -1,0 +1,3 @@
+{"item_id": "src/auth/foo.ts", "status": "ok", "findings": [], "evidence": [{"source": "src/auth/foo.ts:10", "claim": "uses shared middleware"}], "confidence": "high", "errors": []}
+{"item_id": "src/auth/bar.ts", "status": "ok", "findings": [{"severity": "low", "text": "exception documented"}], "evidence": [{"source": "src/auth/bar.ts:22", "claim": "opt-out comment present"}], "confidence": "medium", "errors": []}
+{"item_id": "src/auth/baz.ts", "status": "failed", "findings": [], "evidence": [], "confidence": "low", "errors": ["parse error"]}

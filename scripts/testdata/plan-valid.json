@@ -1,0 +1,106 @@
+{
+  "goal": "Classify 3 handlers relative to shared middleware",
+  "nodes": [
+    {
+      "id": "recon",
+      "description": "List handlers and rubric",
+      "requires": [],
+      "reads": ["src/api"],
+      "writes": [],
+      "output_schema": ["item_id", "status"],
+      "risk": "low",
+      "cardinality": 1,
+      "executor": "inline",
+      "tier": "fast"
+    },
+    {
+      "id": "read_middleware",
+      "description": "Read shared auth middleware",
+      "requires": ["recon.output"],
+      "reads": ["src/auth/middleware.ts"],
+      "writes": [],
+      "output_schema": ["item_id", "status", "findings", "evidence", "confidence", "errors"],
+      "risk": "low",
+      "cardinality": 1,
+      "executor": "subagent",
+      "tier": "standard"
+    },
+    {
+      "id": "classify",
+      "description": "Classify one handler",
+      "requires": ["read_middleware.output"],
+      "reads": ["src/api/handlers"],
+      "writes": [],
+      "output_schema": ["item_id", "status", "findings", "evidence", "confidence", "errors"],
+      "risk": "medium",
+      "cardinality": 3,
+      "executor": "subagent",
+      "tier": "standard"
+    },
+    {
+      "id": "synthesize",
+      "description": "Prioritize findings",
+      "requires": ["classify.output"],
+      "reads": [],
+      "writes": [],
+      "output_schema": ["item_id", "status", "findings", "evidence", "confidence", "errors"],
+      "risk": "high",
+      "cardinality": 1,
+      "executor": "inline",
+      "tier": "standard"
+    }
+  ],
+  "edges": [
+    {
+      "from": "recon",
+      "to": "read_middleware",
+      "reason": "Need the item list before reading middleware in context"
+    },
+    {
+      "from": "read_middleware",
+      "to": "classify",
+      "reason": "Classification is relative to middleware defaults"
+    },
+    {
+      "from": "classify",
+      "to": "synthesize",
+      "reason": "Prioritization consumes all classifications"
+    }
+  ],
+  "constraints": [
+    {
+      "type": "concurrency",
+      "resource": "github_api",
+      "limit": 5
+    }
+  ],
+  "gates": [
+    {
+      "type": "verify",
+      "before": "synthesize"
+    }
+  ],
+  "phases": [
+    {
+      "phase": 0,
+      "mode": "inline",
+      "nodes": ["recon"]
+    },
+    {
+      "phase": 1,
+      "mode": "parallel",
+      "nodes": ["read_middleware"],
+      "batch_size": 1
+    },
+    {
+      "phase": 2,
+      "mode": "parallel",
+      "nodes": ["classify"],
+      "batch_size": 20
+    }
+  ],
+  "artifacts": {
+    "root": "artifacts/graph-orchestrator/example",
+    "ledger": "artifacts/graph-orchestrator/example/ledger.jsonl"
+  }
+}

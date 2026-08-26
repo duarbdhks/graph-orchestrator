@@ -1,0 +1,98 @@
+[
+  {
+    "query": "Audit every handler under src/api for auth gaps relative to the shared middleware and give me a prioritized remediation list.",
+    "should_trigger": true
+  },
+  {
+    "query": "Research these 25 competitor pricing pages, extract plan names and limits, then cluster the patterns.",
+    "should_trigger": true
+  },
+  {
+    "query": "Migrate all 40 REST error payloads in packages/http to the new envelope. Independent files, then one compatibility summary.",
+    "should_trigger": true
+  },
+  {
+    "query": "Review this batch of 15 RFCs in docs/rfcs, same rubric each, then synthesize the blocking comments.",
+    "should_trigger": true
+  },
+  {
+    "query": "Last pass on the 60-file audit thinned out after file 20. Redo it without losing coverage.",
+    "should_trigger": true
+  },
+  {
+    "query": "Find every call site of the deprecated logger across the repo, classify each, and patch the independent modules.",
+    "should_trigger": true
+  },
+  {
+    "query": "Build an incident timeline from Notion, GitHub PRs, and Slack exports, then one report. Sources are independent until merge.",
+    "should_trigger": true
+  },
+  {
+    "query": "Extract structured findings from these 30 PDFs in ./vendor-contracts and reduce them into a risk table.",
+    "should_trigger": true
+  },
+  {
+    "query": "Implement the four independent modules in src/billing, src/notify, src/export, and src/audit, then integrate.",
+    "should_trigger": true
+  },
+  {
+    "query": "Audit every Terraform module in infra/ for public S3 and open security groups, then rank the issues.",
+    "should_trigger": true
+  },
+  {
+    "query": "/graph-orchestrator the remaining onboarding docs in docs/partners — 18 of them — and tell me which contradict the API.",
+    "should_trigger": true
+  },
+  {
+    "query": "Analyze the last 200 support tickets, draft a status email to the 500-person engineering list, and wait before sending.",
+    "should_trigger": true
+  },
+  {
+    "query": "What does parseSessionToken in src/auth/session.ts actually do?",
+    "should_trigger": false
+  },
+  {
+    "query": "Fix the null check on user.email in src/auth/login.ts. That's the only change.",
+    "should_trigger": false
+  },
+  {
+    "query": "Rename FooService to BarService across these 12 files. Mechanical rename, no behavior change.",
+    "should_trigger": false
+  },
+  {
+    "query": "Extract the CSV, transform the columns, load it into the staging table. Each step needs the previous output.",
+    "should_trigger": false
+  },
+  {
+    "query": "Write a README for this repo covering install and one example.",
+    "should_trigger": false
+  },
+  {
+    "query": "Design the schema, write the migration, update the entity, update the DTO, then update the test. True chain, five steps.",
+    "should_trigger": false
+  },
+  {
+    "query": "Explain the shared auth middleware in src/auth/middleware.ts.",
+    "should_trigger": false
+  },
+  {
+    "query": "Pretty-print this JSON blob and tell me if the keys look right.",
+    "should_trigger": false
+  },
+  {
+    "query": "How does this host spawn a subagent? I just need the tool name and the isolation flag.",
+    "should_trigger": false
+  },
+  {
+    "query": "Add a `timezone` field to CreateUserDto. One DTO, one test.",
+    "should_trigger": false
+  },
+  {
+    "query": "Review just src/payments/refund.ts on this PR. Single file, no sweep.",
+    "should_trigger": false
+  },
+  {
+    "query": "Commit the staged changes with a conventional message. Don't touch anything else.",
+    "should_trigger": false
+  }
+]
