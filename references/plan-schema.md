@@ -116,6 +116,8 @@ If `scripts/validate-plan.py` exists, run it on this JSON before handing it over
 
 **`tier`**: `"fast"`, `"standard"`, or `"strongest"`. A tier name, never a model ID. Strongest is reserved for fresh-context verification of high-stakes output.
 
+On Codex, `tier` stays in the plan. Spawn still uses `agent_type="default"` plus explicit `model` and `reasoning_effort`. Do not put a semantic agent type in the plan. Mapping: `references/codex-spawn.md`.
+
 **`verification.stages`**: the three-stage procedure in `references/verification.md`. Do not replace it with "top 5 findings" unless that is only the semantic budget inside that procedure.
 
 **Omit rather than fabricate.** No `timeout_seconds` unless something enforces timeouts. No runner `retry` field unless something retries. Ledger `attempt` is file state, not a promise that a scheduler will retry. A spec that describes infrastructure you don't have is worse than a shorter honest one.

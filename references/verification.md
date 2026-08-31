@@ -51,6 +51,11 @@ If it still cannot pass, give the user the failure report. Do not ship output yo
 
 Prefer host commands and the validator scripts for stage 1. For stages 2 and 3, a fresh-context subagent if the host has one; otherwise a separate inline pass that is not looking at the synthesis. The `strongest` tier belongs here, not on mechanical extraction.
 
+On Codex, `strongest` is a role, not an agent type. Spawn
+`agent_type="default"` with `model="gpt-5.6-sol"` and
+`reasoning_effort="xhigh"`. Do not use `sol_advisor_sol_reviewer` or
+`reviewer`. Mapping: `references/codex-spawn.md`.
+
 ## What this file is not
 
 This does not approve sends, deploys, deletes, or production writes. Those are gates in `SKILL.md`.

@@ -83,3 +83,11 @@ Prompt: "Classify these 40 handlers." Item 12 fails. The other 39 completed.
 Required: record item 12 as failed, continue the batch, surface the failure at consolidation. Do not halt the phase or redo the 39.
 
 Anti-behavior: the whole phase stops because one item errored, discarding completed work.
+
+## codex-spawn-uses-default
+
+Prompt: high-stakes Codex run that needs a fresh-context semantic verifier after consolidation.
+
+Required: spawn the verifier as `agent_type="default"` with `model="gpt-5.6-sol"` and `reasoning_effort="xhigh"`. Implementation children use `xai/grok-4.6` / `xhigh`. Mechanical investigation uses `gpt-5.6-luna` / `max`. The graph may still name `fast` / `standard` / `strongest`.
+
+Anti-behavior: `agent_type="sol_advisor_sol_reviewer"`, `agent_type="reviewer"`, `agent_type="explorer"`, or `agent_type="worker"` to choose a model, or a Codex spawn that omits `model` or `reasoning_effort`.
