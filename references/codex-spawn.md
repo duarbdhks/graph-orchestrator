@@ -28,7 +28,7 @@ A spawn that omits `model` or `reasoning_effort` is invalid on Codex.
 | Graph tier | Use | model | reasoning_effort |
 |---|---|---|---|
 | `fast` | mechanical checks, listing, volume investigation | `gpt-5.6-luna` | `max` |
-| `standard` | per-item implementation, bug fix, refactoring, synthesis | `xai/grok-4.6` | `xhigh` |
+| `standard` | per-item implementation, bug fix, refactoring, synthesis | `xai/grok-4.7` | `xhigh` |
 | `strongest` | fresh-context verification, judgment, final review | `gpt-5.6-sol` | `xhigh` |
 
 Unlisted per-item work uses `standard`. Unlisted verification uses `strongest`.

@@ -88,6 +88,6 @@ Anti-behavior: the whole phase stops because one item errored, discarding comple
 
 Prompt: high-stakes Codex run that needs a fresh-context semantic verifier after consolidation.
 
-Required: spawn the verifier as `agent_type="default"` with `model="gpt-5.6-sol"` and `reasoning_effort="xhigh"`. Implementation children use `xai/grok-4.6` / `xhigh`. Mechanical investigation uses `gpt-5.6-luna` / `max`. The graph may still name `fast` / `standard` / `strongest`.
+Required: spawn the verifier as `agent_type="default"` with `model="gpt-5.6-sol"` and `reasoning_effort="xhigh"`. Implementation children use `xai/grok-4.7` / `xhigh`. Mechanical investigation uses `gpt-5.6-luna` / `max`. The graph may still name `fast` / `standard` / `strongest`.
 
 Anti-behavior: `agent_type="sol_advisor_sol_reviewer"`, `agent_type="reviewer"`, `agent_type="explorer"`, or `agent_type="worker"` to choose a model, or a Codex spawn that omits `model` or `reasoning_effort`.
