@@ -69,7 +69,7 @@ Every item in a cardinality group uses the same keys. You may add fields the pha
 
 | Field | Rule |
 |---|---|
-| `item_id` | Stable id, unique in the group. File path, URL, ticket id. |
+| `item_id` | Stable id, unique in the run, because `ledger.jsonl` keeps one line per item. File path, URL, or ticket id. |
 | `status` | `ok` \| `failed` \| `blocked` |
 | `findings` | Array. Empty array if none. Each finding should carry a severity if the phase uses severity. |
 | `evidence` | Array of `{source, claim}`. Claims without a source do not survive fan-in. |
@@ -115,8 +115,9 @@ Worker `status` and ledger `status` are different vocabularies. Map them; do not
 | before first dispatch | `pending` |
 | dispatch | `running`, `attempt += 1` |
 | `ok` | `done`, set `output_ref` |
-| `failed` | `failed`, set `output_ref` |
-| `blocked` | `blocked`, set `error` |
+| `failed` | `failed`, set `output_ref` and `error` |
+| `blocked` | `blocked`, set `output_ref` and `error` |
+| invalid spawn or missing item file | `failed`, set `error`, do not leave `running` |
 
 Before every fan-in: expected ids vs ledger ids in `done` / `failed` / `blocked`. A line of `38/40` with two named missing ids is a valid ledger query and a valid join result. Do not invent the two missing bodies in prose. Do not start semantic verification until every expected id is `done`, `failed`, or `blocked`.
 

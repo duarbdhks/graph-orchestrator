@@ -1,0 +1,16 @@
+{
+  "goal": "Integer phase nodes should fail validation without a traceback",
+  "nodes": [
+    {
+      "id": "a",
+      "requires": []
+    }
+  ],
+  "phases": [
+    {
+      "phase": 0,
+      "mode": "inline",
+      "nodes": 1
+    }
+  ]
+}

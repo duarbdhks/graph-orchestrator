@@ -80,6 +80,9 @@ def validate(plan: dict[str, Any]) -> list[str]:
         if not isinstance(nid, str) or not nid:
             errors.append(f"nodes[{i}] missing string id")
             continue
+        if "." in nid:
+            errors.append(f"node {nid}: node id must not contain a dot")
+            continue
         if nid in id_set:
             errors.append(f"duplicate node id: {nid}")
             continue
@@ -132,8 +135,11 @@ def validate(plan: dict[str, Any]) -> list[str]:
                 errors.append(f"edges[{i}].from unknown node: {src!r}")
             if dst not in id_set:
                 errors.append(f"edges[{i}].to unknown node: {dst!r}")
-            if not edge.get("reason"):
+            reason = edge.get("reason")
+            if reason is None or reason == "":
                 errors.append(f"edges[{i}] missing reason")
+            elif not isinstance(reason, str):
+                errors.append(f"edges[{i}]: reason must be a non-empty string")
             if src in id_set and dst in id_set:
                 edge_pairs.append((src, dst))
 
@@ -165,6 +171,8 @@ def validate(plan: dict[str, Any]) -> list[str]:
             limit = c.get("limit")
             if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
                 errors.append(f"constraints[{i}].limit must be a positive integer")
+            elif c.get("type") == "write_lock" and limit != 1:
+                errors.append(f"constraints[{i}]: write_lock limit must be 1")
 
     gates = plan.get("gates", [])
     if gates is None:
@@ -192,7 +200,13 @@ def validate(plan: dict[str, Any]) -> list[str]:
             if not isinstance(phase, dict):
                 errors.append(f"phases[{i}] must be an object")
                 continue
-            for nid in phase.get("nodes") or []:
+            raw_nodes = phase.get("nodes", [])
+            if raw_nodes is None:
+                raw_nodes = []
+            if not isinstance(raw_nodes, list) or not all(isinstance(n, str) for n in raw_nodes):
+                errors.append(f"phases[{i}].nodes must be an array of strings")
+                continue
+            for nid in raw_nodes:
                 if nid not in id_set:
                     errors.append(f"phases[{i}] references unknown node: {nid}")
 

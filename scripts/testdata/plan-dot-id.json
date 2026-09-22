@@ -1,0 +1,9 @@
+{
+  "goal": "Dotted node id should fail validation",
+  "nodes": [
+    {
+      "id": "a.b",
+      "requires": []
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "goal": "write_lock limit other than 1 should fail validation",
+  "nodes": [
+    {
+      "id": "a",
+      "requires": []
+    }
+  ],
+  "constraints": [
+    {
+      "type": "write_lock",
+      "resource": "src/auth/middleware.ts",
+      "limit": 5
+    }
+  ]
+}

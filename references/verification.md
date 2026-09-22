@@ -8,7 +8,7 @@ Item file schema is `references/execution-contract.md`. This file does not resta
 
 ## Three stages
 
-Run in this order. Skip a later stage only for low-stakes work, and say so in the phase plan.
+Run in this order. Skip a later stage only when `SKILL.md` tells you to omit Verification, and say that in the reply the user sees. If there is no phase plan, say the skipped stage in that same reply.
 
 ### 1. Deterministic
 
@@ -19,23 +19,23 @@ Cheap, objective, no LLM required.
 - item schema: the required keys in `references/execution-contract.md`
 - for code: tests, typecheck, lint — whichever the repo already runs — before any language-model verifier
 
-If `scripts/validate-results.py` exists, use it here on the **item** JSONL, not the ledger. A failed deterministic stage is a gap or a contract break, not a "looks off" judgment. Name the missing or invalid ids and stop the semantic stage until the set is honest.
+If `scripts/validate-results.py` exists, use it here on the **item** JSONL, not the ledger. A failed deterministic stage is a gap or a contract break, not a "looks off" judgment. Name the missing or invalid ids. Do not start the semantic stage until every expected id is `done`, `failed`, or `blocked`.
 
 ### 2. Semantic
 
 Re-derive claims from source, in a fresh context that did not produce the work. Give the verifier the claims and the sources, not the synthesis.
 
 - every finding with Critical severity
-- the highest-severity High findings, enough that a miss would change the recommendation (top N is a budget, not a substitute for Critical-all)
-- at least one claim that is not in the first batch, so early-item bias is visible
+- every High finding that would change the recommendation
+- at least one item that stage 2 did not re-derive
 
 A critique pass over a summary mostly agrees with the summary. That is not this stage.
 
 ### 3. Sampling
 
-Top-N semantic checks miss a systematic error that lives in Low, Medium, or `ok`.
+Stage 2 can miss a systematic error that lives in Low, Medium, or `ok`.
 
-Draw a small random sample from items that were not in stage 2: `ok` items and Low/Medium findings. Re-derive those from source the same way. If the sample disagrees with the worker, treat it as a class of failure, not a one-off, and widen.
+Re-derive at least one `ok`, Low, or Medium item that stage 2 did not re-derive. Use the same source check. If that item disagrees with the worker, call it a class of failure in the failure report.
 
 ## Recovery
 

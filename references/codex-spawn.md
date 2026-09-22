@@ -21,7 +21,7 @@ Put the graph role in `task_name` and the prompt. Never encode the role as
 `reviewer`, `sol_advisor_sol_reviewer`, `sol_advisor_terra_implementer`,
 `explorer`, `worker`, `poteto-agent`, or another installed profile.
 
-A spawn that omits `model` or `reasoning_effort` is invalid on Codex.
+A spawn that omits `model` or `reasoning_effort` is invalid on Codex. Record that spawn on the ledger as `failed` with `error` set, and do not leave the row `running`. The row is in `references/execution-contract.md`.
 
 ## Mapping
 

@@ -1,0 +1,20 @@
+{
+  "goal": "Non-string edge reason should fail validation",
+  "nodes": [
+    {
+      "id": "a",
+      "requires": []
+    },
+    {
+      "id": "b",
+      "requires": ["a.output"]
+    }
+  ],
+  "edges": [
+    {
+      "from": "a",
+      "to": "b",
+      "reason": ["not", "a", "string"]
+    }
+  ]
+}

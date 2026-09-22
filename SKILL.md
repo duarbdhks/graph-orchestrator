@@ -6,7 +6,7 @@ description: >
   research, or a previous large run that thinned out toward the end. Also
   use when the user runs /graph-orchestrator. Do not use for simple
   questions, one-artifact work, small linear pipelines, mechanical bulk
-  renames, or tasks whose steps genuinely depend on each other.
+  renames, or a chain with no fan-out.
 ---
 
 # Graph Orchestrator
@@ -133,7 +133,7 @@ Anything irreversible or outward-facing (sending, deploying, deleting, writing t
 - Fan-in is not ready until the ledger's expected vs received is honest. Do not synthesize over unnamed gaps.
 - Item failure is node-local. Same failure class twice, or a wrong graph: re-plan.
 - Omit rather than fabricate. No field unless something enforces it.
-- Codex spawn uses `default` plus explicit model and effort. Never `reviewer`, `sol_advisor_*`, `explorer`, or `worker` to choose a model.
+- Codex spawn uses `agent_type="default"` plus an explicit model and effort. Open the Forbidden section of `references/codex-spawn.md` before a Codex spawn. Do not choose a model with a semantic agent type.
 
 ## Trust boundary
 

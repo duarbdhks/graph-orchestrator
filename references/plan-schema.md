@@ -85,7 +85,7 @@ If `scripts/validate-plan.py` exists, run it on this JSON before handing it over
   "verification": {
     "stages": ["deterministic", "semantic", "sampling"],
     "method": "re-derive from source",
-    "scope": "all Critical, top High, plus a sample of ok/Low/Medium"
+    "scope": "all Critical findings, every High finding that would change the recommendation, and at least one item stage 2 did not re-derive"
   }
 }
 ```
@@ -96,7 +96,7 @@ If `scripts/validate-plan.py` exists, run it on this JSON before handing it over
 
 **`reads` / `writes`**: resources, not other nodes. Two nodes that write the same path need a `write_lock` constraint, not a fake sequencing edge, unless one consumes the other's output.
 
-**`output_schema`**: field names each instance returns. Uniform shape across a cardinality group is what makes fan-in cheap. Keep the keys in `references/execution-contract.md`.
+**`output_schema`**: names the item file keys. It does not name the parent return. Uniform shape across a cardinality group is what makes fan-in cheap. Keep the keys in `references/execution-contract.md`.
 
 **`risk`**: `low` \| `medium` \| `high`. High-risk nodes sit behind verification and, if irreversible, an approval gate.
 

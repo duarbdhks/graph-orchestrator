@@ -73,12 +73,13 @@ There's no scheduler underneath a skill. It's instructions the model reads. Para
 
 `scripts/` are contract checkers, not a runner. They do not execute the graph. If you have your own runner, [`references/plan-schema.md`](references/plan-schema.md) defines a JSON plan format you can feed it — the same model as the markdown graph, for handoff only.
 
-On Codex, graph tiers still stay in the plan. Subagents spawn as `default` with an explicit model and effort. Do not pick `reviewer` or `sol_advisor_*` to mean `strongest`. See [`references/codex-spawn.md`](references/codex-spawn.md).
+On Codex, graph tiers still stay in the plan. Subagents spawn as `default` with an explicit model and effort. The forbidden profiles are in [`references/codex-spawn.md`](references/codex-spawn.md).
 
 ## Repo structure
 
 ```
 graph-orchestrator/
+├── assets/banner.png                 # banner
 ├── SKILL.md                          # the skill, start here
 ├── references/
 │   ├── execution-contract.md         # artifacts, worker shape, ledger
