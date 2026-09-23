@@ -114,7 +114,7 @@ If `scripts/validate-plan.py` exists, run it on this JSON before handing it over
 
 **`executor`**: `"inline"` or `"subagent"`. Irreversible nodes, recon, and final synthesis are always `"inline"`; high-cardinality independent nodes are usually `"subagent"`.
 
-**`tier`**: `"fast"`, `"standard"`, or `"strongest"`. A tier name, never a model ID. Strongest is reserved for fresh-context verification of high-stakes output.
+**`tier`**: `"fast"`, `"standard"`, or `"strongest"`. A tier name, never a model ID. Use `fast` for independent verification and `strongest` for final judgment after verification.
 
 On Codex, `tier` stays in the plan. Spawn still uses `agent_type="default"` plus explicit `model` and `reasoning_effort`. Do not put a semantic agent type in the plan. Mapping: `references/codex-spawn.md`.
 

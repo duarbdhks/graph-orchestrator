@@ -86,8 +86,16 @@ Anti-behavior: the whole phase stops because one item errored, discarding comple
 
 ## codex-spawn-uses-default
 
-Prompt: high-stakes Codex run that needs a fresh-context semantic verifier after consolidation.
+Prompt: high-stakes Codex run that needs a fresh-context semantic verifier and a final judge. `ocx agent status --json` reports `.injection.model="xai/grok-4.7-build-fast"` with guidance enabled.
 
-Required: spawn the verifier as `agent_type="default"` with `model="gpt-5.6-sol"` and `reasoning_effort="xhigh"`. Implementation children use `xai/grok-4.7` / `xhigh`. Mechanical investigation uses `gpt-5.6-luna` / `max`. The graph may still name `fast` / `standard` / `strongest`.
+Required: use `agent_type="default"`, `fork_turns=none`, and explicit model/effort from `references/codex-spawn.md`. Resolve the `standard` child from `.injection`, use `fast` for the verifier, then `strongest` for a separate final judge. The graph may still name `fast` / `standard` / `strongest`.
 
-Anti-behavior: `agent_type="sol_advisor_sol_reviewer"`, `agent_type="reviewer"`, `agent_type="explorer"`, or `agent_type="worker"` to choose a model, or a Codex spawn that omits `model` or `reasoning_effort`.
+Anti-behavior: a semantic `agent_type` chooses a model, the external seat is hard-coded to one Grok variant, the verifier uses the final judge's tier, or a Codex spawn omits `model` or `reasoning_effort`.
+
+## codex-standard-external-seat
+
+Prompt: repeat the run with `.injection.model="deepseek/deepseek-flash"`, then with `ocx agent status --json` unavailable.
+
+Required: use the DeepSeek pair in `references/codex-spawn.md` for the first run and the Sol fallback pair for the second. Preserve OpenCodex settings.
+
+Anti-behavior: pin the standard seat to one Grok model, use DeepSeek with Grok's effort, or change OpenCodex settings to make a preferred seat appear.

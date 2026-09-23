@@ -13,13 +13,11 @@ Every Codex subagent uses:
 ```text
 agent_type = default
 fork_turns = none
-model = <from the table>
-reasoning_effort = <from the table>
+model = <resolved below>
+reasoning_effort = <resolved below>
 ```
 
-Put the graph role in `task_name` and the prompt. Never encode the role as
-`reviewer`, `sol_advisor_sol_reviewer`, `sol_advisor_terra_implementer`,
-`explorer`, `worker`, `poteto-agent`, or another installed profile.
+Put the graph role in `task_name` and the prompt, not in `agent_type`.
 
 A spawn that omits `model` or `reasoning_effort` is invalid on Codex. Record that spawn on the ledger as `failed` with `error` set, and do not leave the row `running`. The row is in `references/execution-contract.md`.
 
@@ -27,24 +25,29 @@ A spawn that omits `model` or `reasoning_effort` is invalid on Codex. Record tha
 
 | Graph tier | Use | model | reasoning_effort |
 |---|---|---|---|
-| `fast` | mechanical checks, listing, volume investigation | `gpt-5.6-luna` | `max` |
-| `standard` | per-item implementation, bug fix, refactoring, synthesis | `xai/grok-4.7` | `xhigh` |
-| `strongest` | fresh-context verification, judgment, final review | `gpt-5.6-sol` | `xhigh` |
+| `fast` | mechanical checks, exploration, blast-radius, test writing, independent verification | `gpt-6-luna` | `max` |
+| `standard` | per-item work | canonical external seat; fallback `gpt-6-sol` | seat-specific; fallback `max` |
+| `strongest` | architecture, final judgment after verification | `gpt-6-astra` | `xhigh` |
 
-Unlisted per-item work uses `standard`. Unlisted verification uses `strongest`.
+Before a `standard` fan-out, run `ocx agent status --json` and read the nested
+`.injection.model`. When `.injection.multiAgentGuidanceEnabled` is true, use
+that model with the effort below, rather than copying `.injection.effort`:
+
+| `.injection.model` | `reasoning_effort` |
+|---|---|
+| `xai/grok-4.7` | `xhigh` |
+| `xai/grok-4.7-build-fast` | `xhigh` |
+| `deepseek/deepseek-flash` | `max` |
+
+If status fails, `.injection` is missing or disabled, or the model is unlisted,
+use `gpt-6-sol` / `max`. Do not change OpenCodex settings. Unlisted per-item work
+uses `standard`; unlisted verification uses `fast`. Reserve `strongest` for a
+separate final judge.
 
 The parent owns integration, irreversible actions, and the final answer.
 
 ## Forbidden
 
-Do not spawn Codex children as:
-
-```text
-agent_type = sol_advisor_sol_reviewer
-agent_type = reviewer
-agent_type = explorer
-agent_type = worker
-```
-
-Those types ignore this mapping. `reviewer` pins `gpt-5.4 / high`.
-`sol_advisor_sol_reviewer` pins `gpt-5.6-sol / high`.
+Use `agent_type=default`. Semantic types such as `reviewer`,
+`sol_advisor_sol_reviewer`, `explorer`, and `worker` may override this mapping
+with their own model and effort.

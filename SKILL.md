@@ -105,7 +105,7 @@ Always inline: recon, the reads-output audit, final synthesis and prioritization
 
 Before dispatch, map ledger statuses per the contract (`pending` → `running`; worker `ok` → ledger `done`). Same shape for every item in a group. Failures are data: record, continue, surface at consolidation; halt the phase only when the failure invalidates the rest. At each phase boundary, restate the `requires` this phase consumes. If the graph is wrong, re-plan.
 
-When the host can assign a model tier, match the tier to the node: `fast` for mechanical checks, `standard` for per-item work, `strongest` for fresh-context verification. Keep `tier` as a plan field. Do not use a semantic agent type to pick a model.
+When the host can assign a model tier, match the tier to the node: `fast` for mechanical checks and independent verification, `standard` for per-item work, `strongest` for final judgment after verification. Keep `tier` as a plan field. Do not use a semantic agent type to pick a model.
 
 On Codex, spawn with `agent_type="default"` and set `model` plus `reasoning_effort` explicitly. Mapping: `references/codex-spawn.md`.
 

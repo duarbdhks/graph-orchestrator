@@ -30,8 +30,9 @@ Recon     items, shared middleware, write locks, rubric, output shape     inline
 Fan-out   60 handler audits, fresh context per batch                      subagents
           each worker writes an item file; parent keeps refs
 Join      layered consolidation; completeness from the ledger             60 in, 60 out
-Judge     prioritized remediation                                         inline
-Verify    deterministic + semantic + sample; fail → node-local redo       strongest, fresh context
+Synthesize prioritized remediation                                        inline
+Verify    deterministic + semantic + sample; fail → node-local redo       fast, fresh context
+Judge     final judgment of verified output                               strongest, fresh context
 Draft     email                                                           inline
 Gate      HUMAN APPROVAL                                                  exact action, scope, cost
 ```
