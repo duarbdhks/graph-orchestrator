@@ -26,7 +26,7 @@ A spawn that omits `model` or `reasoning_effort` is invalid on Codex. Record tha
 | Graph tier | Use | model | reasoning_effort |
 |---|---|---|---|
 | `fast` | mechanical checks, exploration, blast-radius, test writing, independent verification | `gpt-6-luna` | `max` |
-| `standard` | per-item work | canonical external seat; fallback `gpt-6-sol` | seat-specific; fallback `max` |
+| `standard` | per-item work | canonical external seat; fallback `gpt-6.1-sol` | seat-specific; fallback `xhigh` |
 | `strongest` | architecture, final judgment after verification | `gpt-6-astra` | `xhigh` |
 
 Before a `standard` fan-out, run `ocx agent status --json` and read the nested
@@ -40,7 +40,7 @@ that model with the effort below, rather than copying `.injection.effort`:
 | `deepseek/deepseek-flash` | `max` |
 
 If status fails, `.injection` is missing or disabled, or the model is unlisted,
-use `gpt-6-sol` / `max`. Do not change OpenCodex settings. Unlisted per-item work
+use `gpt-6.1-sol` / `xhigh`. Do not change OpenCodex settings. Unlisted per-item work
 uses `standard`; unlisted verification uses `fast`. Reserve `strongest` for a
 separate final judge.
 
