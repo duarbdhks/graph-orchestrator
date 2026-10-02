@@ -23,26 +23,25 @@ A spawn that omits `model` or `reasoning_effort` is invalid on Codex. Record tha
 
 ## Mapping
 
-| Graph tier | Use | model | reasoning_effort |
-|---|---|---|---|
-| `fast` | mechanical checks, exploration, blast-radius, test writing, independent verification | `gpt-6-luna` | `max` |
-| `standard` | per-item work | canonical external seat; fallback `gpt-6.1-sol` | seat-specific; fallback `xhigh` |
-| `strongest` | architecture, final judgment after verification | `gpt-6-astra` | `xhigh` |
+Before every Codex fan-out, read `~/.codex/AGENTS.md` and the YAML in
+`~/.codex/pstack-models.md`. Resolve both model and effort through that global
+policy. This mapping chooses a selection, not a separate model rule:
 
-Before a `standard` fan-out, run `ocx agent status --json` and read the nested
-`.injection.model`. When `.injection.multiAgentGuidanceEnabled` is true, use
-that model with the effort below, rather than copying `.injection.effort`:
+| Graph tier | Use | YAML selection |
+|---|---|---|
+| `fast` | mechanical checks, exploration, blast-radius, test writing, independent verification | `defaults.evidence` |
+| `standard` | per-item work | `roles["feature, refactoring"]` |
+| `strongest` | architecture, final judgment after verification | `defaults.judgment` |
 
-| `.injection.model` | `reasoning_effort` |
-|---|---|
-| `xai/grok-4.7` | `xhigh` |
-| `xai/grok-4.7-build-fast` | `xhigh` |
-| `deepseek/deepseek-flash` | `max` |
+All three tiers follow the active OpenCodex model and effort unchanged.
+When OpenCodex is unavailable, each selection uses its own configured
+fallback pair. The global policy owns status reads, timeouts, supported
+pairs, explicit user overrides and fallback reporting. If either policy
+file is missing or invalid, stop dispatch and report the missing policy.
 
-If status fails, `.injection` is missing or disabled, or the model is unlisted,
-use `gpt-6.1-sol` / `xhigh`. Do not change OpenCodex settings. Unlisted per-item work
-uses `standard`; unlisted verification uses `fast`. Reserve `strongest` for a
-separate final judge.
+Unlisted per-item work uses `standard`; unlisted verification uses `fast`.
+Reserve `strongest` for a separate final judge. Tiers and independent roles
+remain distinct even when their resolved models are identical.
 
 The parent owns integration, irreversible actions, and the final answer.
 

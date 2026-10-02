@@ -86,16 +86,16 @@ Anti-behavior: the whole phase stops because one item errored, discarding comple
 
 ## codex-spawn-uses-default
 
-Prompt: high-stakes Codex run that needs a fresh-context semantic verifier and a final judge. `ocx agent status --json` reports `.injection.model="xai/grok-4.7-build-fast"` with guidance enabled.
+Prompt: high-stakes Codex run that needs a fresh-context semantic verifier and a final judge. Status reports a running OpenCodex proxy with `opencodex-local` routing. Injection selects a supported model and effort with guidance enabled.
 
-Required: use `agent_type="default"`, `fork_turns=none`, and explicit model/effort from `references/codex-spawn.md`. Resolve the `standard` child from `.injection`, use `fast` for the verifier, then `strongest` for a separate final judge. The graph may still name `fast` / `standard` / `strongest`.
+Required: use `agent_type="default"`, `fork_turns=none`, and explicit model/effort from the global policy through `references/codex-spawn.md`. All three tiers use the injection pair unchanged. Keep `fast` for the verifier and `strongest` for a separate final judge, with independent contexts.
 
-Anti-behavior: a semantic `agent_type` chooses a model, the external seat is hard-coded to one Grok variant, the verifier uses the final judge's tier, or a Codex spawn omits `model` or `reasoning_effort`.
+Anti-behavior: a semantic `agent_type` chooses a model, a tier pins a model or effort, the verifier uses the final judge's tier, or a Codex spawn omits `model` or `reasoning_effort`.
 
-## codex-standard-external-seat
+## codex-global-routing-and-fallback
 
-Prompt: repeat the run with `.injection.model="deepseek/deepseek-flash"`, then with `ocx agent status --json` unavailable.
+Prompt: repeat with supported Opus and Sonnet injection pairs, then with guidance disabled, CLI missing, proxy stopped, native routing, a timeout, malformed JSON, or an unsupported model/effort. Include a pstack panel and an unlisted evidence task. Finally request one supported model/effort explicitly.
 
-Required: use the DeepSeek pair in `references/codex-spawn.md` for the first run and the Sol fallback pair for the second. Preserve OpenCodex settings.
+Required: use injection unchanged for every role when valid; otherwise use each YAML selection's complete fallback. Keep all panel slots and their order. Explicit user choice wins. Reject an unsupported fallback, report the reason once per batch, and preserve OpenCodex settings. Status commands run once each per batch with 5-second timeouts. Compare requested pairs with child `turn_context` for live checks.
 
-Anti-behavior: pin the standard seat to one Grok model, use DeepSeek with Grok's effort, or change OpenCodex settings to make a preferred seat appear.
+Anti-behavior: use a provider allowlist separate from the active spawn contract, mix an injection model with fallback effort, skip duplicate panel slots, treat a running but unused proxy as active, or restore/restart OpenCodex to make a check pass.
