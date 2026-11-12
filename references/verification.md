@@ -27,6 +27,7 @@ Re-derive claims from source, in a fresh context that did not produce the work. 
 
 - every finding with Critical severity
 - every High finding that would change the recommendation
+
 Stage 3 independently samples the remaining Low/Medium/ok items; do not count those as stage 2 checks.
 
 A critique pass over a summary mostly agrees with the summary. That is not this stage.
