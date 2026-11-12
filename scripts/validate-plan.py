@@ -34,37 +34,37 @@ def load_plan(path: str) -> dict[str, Any]:
 
 
 def has_cycle(ids: set[str], edges: list[tuple[str, str]]) -> list[str]:
+    """Find a directed cycle iteratively, even for graphs >1000 nodes."""
     graph: dict[str, list[str]] = defaultdict(list)
     for src, dst in edges:
         graph[src].append(dst)
-    WHITE, GRAY, BLACK = 0, 1, 2
-    color = {n: WHITE for n in ids}
-    found: list[str] = []
 
-    def dfs(u: str, stack: list[str]) -> None:
-        color[u] = GRAY
-        stack.append(u)
-        for v in graph[u]:
-            if v not in color:
+    state = {node: 0 for node in ids}  # unseen, visiting, visited
+    for root in sorted(ids):
+        if state[root]:
+            continue
+        state[root] = 1
+        stack = [(root, iter(graph[root]))]
+        positions = {root: 0}
+        while stack:
+            current, neighbors = stack[-1]
+            try:
+                neighbor = next(neighbors)
+            except StopIteration:
+                state[current] = 2
+                del positions[current]
+                stack.pop()
                 continue
-            if color[v] == GRAY:
-                cycle_start = stack.index(v)
-                found.append(" -> ".join(stack[cycle_start:] + [v]))
-                return
-            if color[v] == WHITE:
-                dfs(v, stack)
-                if found:
-                    return
-        stack.pop()
-        color[u] = BLACK
-
-    for n in ids:
-        if color[n] == WHITE:
-            dfs(n, [])
-            if found:
-                return found
-    return found
-
+            if neighbor not in state:
+                continue
+            if state[neighbor] == 1:
+                path = [node for node, _ in stack]
+                return [" -> ".join(path[positions[neighbor]:] + [neighbor])]
+            if state[neighbor] == 0:
+                state[neighbor] = 1
+                positions[neighbor] = len(stack)
+                stack.append((neighbor, iter(graph[neighbor])))
+    return []
 
 def validate(plan: dict[str, Any]) -> list[str]:
     errors: list[str] = []
@@ -206,6 +206,8 @@ def validate(plan: dict[str, Any]) -> list[str]:
     phases = plan.get("phases", [])
     if phases is None:
         phases = []
+    phase_positions: dict[str, int] = {}
+    phase_numbers: set[int] = set()
     if not isinstance(phases, list):
         errors.append("phases must be an array")
     else:
@@ -213,15 +215,44 @@ def validate(plan: dict[str, Any]) -> list[str]:
             if not isinstance(phase, dict):
                 errors.append(f"phases[{i}] must be an object")
                 continue
+            number = phase.get("phase")
+            if not isinstance(number, int) or isinstance(number, bool) or number < 0:
+                errors.append(f"phases[{i}].phase must be a non-negative integer")
+            elif number in phase_numbers:
+                errors.append(f"phases[{i}]: duplicate phase number {number}")
+            else:
+                phase_numbers.add(number)
+
+            if phase.get("mode") not in ("inline", "parallel"):
+                errors.append(f"phases[{i}].mode must be inline|parallel")
+            batch_size = phase.get("batch_size")
+            if batch_size is not None and (
+                not isinstance(batch_size, int) or isinstance(batch_size, bool) or batch_size < 1
+            ):
+                errors.append(f"phases[{i}].batch_size must be a positive integer")
+
             raw_nodes = phase.get("nodes", [])
-            if raw_nodes is None:
-                raw_nodes = []
             if not isinstance(raw_nodes, list) or not all(isinstance(n, str) for n in raw_nodes):
                 errors.append(f"phases[{i}].nodes must be an array of strings")
                 continue
             for nid in raw_nodes:
                 if nid not in id_set:
                     errors.append(f"phases[{i}] references unknown node: {nid}")
+                elif nid in phase_positions:
+                    errors.append(f"node {nid} appears in multiple phase entries")
+                elif isinstance(number, int) and not isinstance(number, bool) and number >= 0:
+                    phase_positions[nid] = number
+
+        if phases:
+            for nid in sorted(id_set - phase_positions.keys()):
+                errors.append(f"node {nid} is missing from phases")
+            for src, dst in sorted(set(edge_pairs)):
+                if src in phase_positions and dst in phase_positions:
+                    if phase_positions[src] >= phase_positions[dst]:
+                        errors.append(
+                            f"dependency {src} -> {dst} violates phase order "
+                            f"({phase_positions[src]} >= {phase_positions[dst]})"
+                        )
 
     cycles = has_cycle(id_set, edge_pairs)
     for cycle in cycles:
