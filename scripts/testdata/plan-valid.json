@@ -5,14 +5,9 @@
       "id": "recon",
       "description": "List handlers and rubric",
       "requires": [],
-      "reads": [
-        "src/api"
-      ],
+      "reads": ["src/api"],
       "writes": [],
-      "output_schema": [
-        "item_id",
-        "status"
-      ],
+      "output_schema": ["item_id", "status"],
       "risk": "low",
       "cardinality": 1,
       "executor": "inline",
@@ -21,21 +16,10 @@
     {
       "id": "read_middleware",
       "description": "Read shared auth middleware",
-      "requires": [
-        "recon.output"
-      ],
-      "reads": [
-        "src/auth/middleware.ts"
-      ],
+      "requires": ["recon.output"],
+      "reads": ["src/auth/middleware.ts"],
       "writes": [],
-      "output_schema": [
-        "item_id",
-        "status",
-        "findings",
-        "evidence",
-        "confidence",
-        "errors"
-      ],
+      "output_schema": ["item_id", "status", "findings", "evidence", "confidence", "errors"],
       "risk": "low",
       "cardinality": 1,
       "executor": "subagent",
@@ -44,21 +28,10 @@
     {
       "id": "classify",
       "description": "Classify one handler",
-      "requires": [
-        "read_middleware.output"
-      ],
-      "reads": [
-        "src/api/handlers"
-      ],
+      "requires": ["read_middleware.output"],
+      "reads": ["src/api/handlers"],
       "writes": [],
-      "output_schema": [
-        "item_id",
-        "status",
-        "findings",
-        "evidence",
-        "confidence",
-        "errors"
-      ],
+      "output_schema": ["item_id", "status", "findings", "evidence", "confidence", "errors"],
       "risk": "medium",
       "cardinality": 3,
       "executor": "subagent",
@@ -67,19 +40,10 @@
     {
       "id": "synthesize",
       "description": "Prioritize findings",
-      "requires": [
-        "classify.output"
-      ],
+      "requires": ["classify.output"],
       "reads": [],
       "writes": [],
-      "output_schema": [
-        "item_id",
-        "status",
-        "findings",
-        "evidence",
-        "confidence",
-        "errors"
-      ],
+      "output_schema": ["item_id", "status", "findings", "evidence", "confidence", "errors"],
       "risk": "high",
       "cardinality": 1,
       "executor": "inline",
@@ -120,32 +84,24 @@
     {
       "phase": 0,
       "mode": "inline",
-      "nodes": [
-        "recon"
-      ]
+      "nodes": ["recon"]
     },
     {
       "phase": 1,
       "mode": "parallel",
-      "nodes": [
-        "read_middleware"
-      ],
+      "nodes": ["read_middleware"],
       "batch_size": 1
     },
     {
       "phase": 2,
       "mode": "parallel",
-      "nodes": [
-        "classify"
-      ],
+      "nodes": ["classify"],
       "batch_size": 20
     },
     {
       "phase": 3,
       "mode": "inline",
-      "nodes": [
-        "synthesize"
-      ]
+      "nodes": ["synthesize"]
     }
   ],
   "artifacts": {
