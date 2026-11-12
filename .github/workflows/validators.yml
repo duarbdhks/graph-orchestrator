@@ -2,7 +2,7 @@ name: Graph contract checks
 
 on:
   push:
-    branches: [main, "fix/**"]
+    branches: [main]
   pull_request:
 
 permissions:
