@@ -97,6 +97,11 @@
       "mode": "parallel",
       "nodes": ["classify"],
       "batch_size": 20
+    },
+    {
+      "phase": 3,
+      "mode": "inline",
+      "nodes": ["synthesize"]
     }
   ],
   "artifacts": {

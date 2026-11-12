@@ -1,0 +1,21 @@
+name: Graph contract checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validators:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run validator regression tests
+        run: python3 -m unittest discover -s scripts/tests -v
+      - name: Validate complete example
+        run: |
+          python3 scripts/validate-plan.py scripts/testdata/plan-valid.json
+          python3 scripts/validate-results.py scripts/testdata/expected-ids.json scripts/testdata/results-complete.jsonl

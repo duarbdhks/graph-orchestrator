@@ -19,7 +19,10 @@ GATE_TYPES = {"verify", "approval"}
 def node_id_from_ref(ref: Any) -> str | None:
     if not isinstance(ref, str) or not ref.strip():
         return None
-    return ref.split(".", 1)[0]
+    node, dot, suffix = ref.partition(".")
+    if ref != ref.strip() or not node or (dot and suffix != "output"):
+        return None
+    return node
 
 
 def load_plan(path: str) -> dict[str, Any]:
@@ -31,37 +34,37 @@ def load_plan(path: str) -> dict[str, Any]:
 
 
 def has_cycle(ids: set[str], edges: list[tuple[str, str]]) -> list[str]:
+    """Find a directed cycle iteratively, even for graphs >1000 nodes."""
     graph: dict[str, list[str]] = defaultdict(list)
     for src, dst in edges:
         graph[src].append(dst)
-    WHITE, GRAY, BLACK = 0, 1, 2
-    color = {n: WHITE for n in ids}
-    found: list[str] = []
 
-    def dfs(u: str, stack: list[str]) -> None:
-        color[u] = GRAY
-        stack.append(u)
-        for v in graph[u]:
-            if v not in color:
+    state = {node: 0 for node in ids}  # unseen, visiting, visited
+    for root in sorted(ids):
+        if state[root]:
+            continue
+        state[root] = 1
+        stack = [(root, iter(graph[root]))]
+        positions = {root: 0}
+        while stack:
+            current, neighbors = stack[-1]
+            try:
+                neighbor = next(neighbors)
+            except StopIteration:
+                state[current] = 2
+                del positions[current]
+                stack.pop()
                 continue
-            if color[v] == GRAY:
-                cycle_start = stack.index(v)
-                found.append(" -> ".join(stack[cycle_start:] + [v]))
-                return
-            if color[v] == WHITE:
-                dfs(v, stack)
-                if found:
-                    return
-        stack.pop()
-        color[u] = BLACK
-
-    for n in ids:
-        if color[n] == WHITE:
-            dfs(n, [])
-            if found:
-                return found
-    return found
-
+            if neighbor not in state:
+                continue
+            if state[neighbor] == 1:
+                path = [node for node, _ in stack]
+                return [" -> ".join(path[positions[neighbor]:] + [neighbor])]
+            if state[neighbor] == 0:
+                state[neighbor] = 1
+                positions[neighbor] = len(stack)
+                stack.append((neighbor, iter(graph[neighbor])))
+    return []
 
 def validate(plan: dict[str, Any]) -> list[str]:
     errors: list[str] = []
@@ -77,10 +80,10 @@ def validate(plan: dict[str, Any]) -> list[str]:
             errors.append(f"nodes[{i}] must be an object")
             continue
         nid = node.get("id")
-        if not isinstance(nid, str) or not nid:
+        if not isinstance(nid, str) or not nid.strip():
             errors.append(f"nodes[{i}] missing string id")
             continue
-        if "." in nid:
+        if "." in nid or nid != nid.strip():
             errors.append(f"node {nid}: node id must not contain a dot")
             continue
         if nid in id_set:
@@ -90,16 +93,22 @@ def validate(plan: dict[str, Any]) -> list[str]:
         id_set.add(nid)
 
         executor = node.get("executor")
-        if executor is not None and executor not in NODE_EXECUTORS:
+        if executor is not None and (not isinstance(executor, str) or executor not in NODE_EXECUTORS):
             errors.append(f"node {nid}: executor must be inline|subagent, got {executor!r}")
         tier = node.get("tier")
-        if tier is not None and tier not in NODE_TIERS:
+        if tier is not None and (not isinstance(tier, str) or tier not in NODE_TIERS):
             errors.append(f"node {nid}: tier must be fast|standard|strongest, got {tier!r}")
         risk = node.get("risk")
-        if risk is not None and risk not in NODE_RISKS:
+        if risk is not None and (not isinstance(risk, str) or risk not in NODE_RISKS):
             errors.append(f"node {nid}: risk must be low|medium|high, got {risk!r}")
 
-        requires = node.get("requires") or []
+        cardinality = node.get("cardinality")
+        if cardinality is not None and (
+            not isinstance(cardinality, int) or isinstance(cardinality, bool) or cardinality < 1
+        ):
+            errors.append(f"node {nid}: cardinality must be a positive integer")
+
+        requires = node.get("requires", [])
         if not isinstance(requires, list):
             errors.append(f"node {nid}: requires must be an array")
         else:
@@ -112,9 +121,12 @@ def validate(plan: dict[str, Any]) -> list[str]:
         if not isinstance(node, dict):
             continue
         nid = node.get("id")
-        if nid not in id_set:
+        if not isinstance(nid, str) or nid not in id_set:
             continue
-        for ref in node.get("requires") or []:
+        requires = node.get("requires", [])
+        if not isinstance(requires, list):
+            continue
+        for ref in requires:
             dep = node_id_from_ref(ref)
             if dep and dep not in id_set:
                 errors.append(f"node {nid}: requires unknown node {dep}")
@@ -131,25 +143,26 @@ def validate(plan: dict[str, Any]) -> list[str]:
                 errors.append(f"edges[{i}] must be an object")
                 continue
             src, dst = edge.get("from"), edge.get("to")
-            if src not in id_set:
+            if not isinstance(src, str) or src not in id_set:
                 errors.append(f"edges[{i}].from unknown node: {src!r}")
-            if dst not in id_set:
+            if not isinstance(dst, str) or dst not in id_set:
                 errors.append(f"edges[{i}].to unknown node: {dst!r}")
             reason = edge.get("reason")
-            if reason is None or reason == "":
-                errors.append(f"edges[{i}] missing reason")
-            elif not isinstance(reason, str):
+            if not isinstance(reason, str) or not reason.strip():
                 errors.append(f"edges[{i}]: reason must be a non-empty string")
-            if src in id_set and dst in id_set:
+            if isinstance(src, str) and isinstance(dst, str) and src in id_set and dst in id_set:
                 edge_pairs.append((src, dst))
 
     for node in nodes:
         if not isinstance(node, dict):
             continue
         nid = node.get("id")
-        if nid not in id_set:
+        if not isinstance(nid, str) or nid not in id_set:
             continue
-        for ref in node.get("requires") or []:
+        requires = node.get("requires", [])
+        if not isinstance(requires, list):
+            continue
+        for ref in requires:
             dep = node_id_from_ref(ref)
             if dep and dep in id_set:
                 edge_pairs.append((dep, nid))
@@ -164,9 +177,9 @@ def validate(plan: dict[str, Any]) -> list[str]:
             if not isinstance(c, dict):
                 errors.append(f"constraints[{i}] must be an object")
                 continue
-            if c.get("type") not in CONSTRAINT_TYPES:
+            if not isinstance(c.get("type"), str) or c["type"] not in CONSTRAINT_TYPES:
                 errors.append(f"constraints[{i}].type must be concurrency|write_lock")
-            if not c.get("resource"):
+            if not isinstance(c.get("resource"), str) or not c["resource"].strip():
                 errors.append(f"constraints[{i}] missing resource")
             limit = c.get("limit")
             if not isinstance(limit, int) or isinstance(limit, bool) or limit < 1:
@@ -184,15 +197,17 @@ def validate(plan: dict[str, Any]) -> list[str]:
             if not isinstance(g, dict):
                 errors.append(f"gates[{i}] must be an object")
                 continue
-            if g.get("type") not in GATE_TYPES:
+            if not isinstance(g.get("type"), str) or g["type"] not in GATE_TYPES:
                 errors.append(f"gates[{i}].type must be verify|approval")
             before = g.get("before")
-            if before not in id_set:
+            if not isinstance(before, str) or before not in id_set:
                 errors.append(f"gates[{i}].before unknown node: {before!r}")
 
     phases = plan.get("phases", [])
     if phases is None:
         phases = []
+    phase_positions: dict[str, int] = {}
+    phase_numbers: set[int] = set()
     if not isinstance(phases, list):
         errors.append("phases must be an array")
     else:
@@ -200,15 +215,44 @@ def validate(plan: dict[str, Any]) -> list[str]:
             if not isinstance(phase, dict):
                 errors.append(f"phases[{i}] must be an object")
                 continue
+            number = phase.get("phase")
+            if not isinstance(number, int) or isinstance(number, bool) or number < 0:
+                errors.append(f"phases[{i}].phase must be a non-negative integer")
+            elif number in phase_numbers:
+                errors.append(f"phases[{i}]: duplicate phase number {number}")
+            else:
+                phase_numbers.add(number)
+
+            if phase.get("mode") not in ("inline", "parallel"):
+                errors.append(f"phases[{i}].mode must be inline|parallel")
+            batch_size = phase.get("batch_size")
+            if batch_size is not None and (
+                not isinstance(batch_size, int) or isinstance(batch_size, bool) or batch_size < 1
+            ):
+                errors.append(f"phases[{i}].batch_size must be a positive integer")
+
             raw_nodes = phase.get("nodes", [])
-            if raw_nodes is None:
-                raw_nodes = []
             if not isinstance(raw_nodes, list) or not all(isinstance(n, str) for n in raw_nodes):
                 errors.append(f"phases[{i}].nodes must be an array of strings")
                 continue
             for nid in raw_nodes:
                 if nid not in id_set:
                     errors.append(f"phases[{i}] references unknown node: {nid}")
+                elif nid in phase_positions:
+                    errors.append(f"node {nid} appears in multiple phase entries")
+                elif isinstance(number, int) and not isinstance(number, bool) and number >= 0:
+                    phase_positions[nid] = number
+
+        if phases:
+            for nid in sorted(id_set - phase_positions.keys()):
+                errors.append(f"node {nid} is missing from phases")
+            for src, dst in sorted(set(edge_pairs)):
+                if src in phase_positions and dst in phase_positions:
+                    if phase_positions[src] >= phase_positions[dst]:
+                        errors.append(
+                            f"dependency {src} -> {dst} violates phase order "
+                            f"({phase_positions[src]} >= {phase_positions[dst]})"
+                        )
 
     cycles = has_cycle(id_set, edge_pairs)
     for cycle in cycles:
