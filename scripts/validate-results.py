@@ -15,20 +15,24 @@ REQUIRED = ("item_id", "status", "findings", "evidence", "confidence", "errors")
 
 def load_expected(path: str) -> list[str]:
     with open(path, encoding="utf-8") as fh:
-        raw = fh.read()
-    stripped = raw.strip()
+        stripped = fh.read().strip()
     if stripped.startswith("[") or stripped.startswith("{"):
         data = json.loads(stripped)
         if isinstance(data, dict) and "ids" in data:
             data = data["ids"]
-        if not isinstance(data, list) or not all(isinstance(x, str) for x in data):
-            raise ValueError("expected-ids JSON must be an array of strings")
-        return data
-    ids = [line.strip() for line in stripped.splitlines() if line.strip() and not line.startswith("#")]
-    if not ids:
-        raise ValueError("expected-ids file is empty")
-    return ids
-
+    else:
+        data = [
+            line.strip() for line in stripped.splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        ]
+    if not isinstance(data, list) or not data or not all(
+        isinstance(value, str) and value.strip() and value == value.strip()
+        for value in data
+    ):
+        raise ValueError("expected ids must be a non-empty array of non-blank strings")
+    if len(data) != len(set(data)):
+        raise ValueError("expected ids contain duplicates")
+    return data
 
 def load_results(path: str) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
@@ -58,7 +62,7 @@ def validate(expected: list[str], items: list[dict[str, Any]]) -> list[str]:
             if key not in item:
                 errors.append(f"{loc} missing field {key}")
         item_id = item.get("item_id")
-        if not isinstance(item_id, str) or not item_id:
+        if not isinstance(item_id, str) or not item_id.strip():
             errors.append(f"{loc} item_id must be a non-empty string")
             continue
         received.append(item_id)
@@ -68,18 +72,30 @@ def validate(expected: list[str], items: list[dict[str, Any]]) -> list[str]:
             seen[item_id] = i
 
         status = item.get("status")
-        if status not in STATUSES:
+        if not isinstance(status, str) or status not in STATUSES:
             errors.append(f"{item_id}: status must be ok|failed|blocked, got {status!r}")
         confidence = item.get("confidence")
-        if "confidence" in item and confidence not in CONFIDENCES:
+        if "confidence" in item and (not isinstance(confidence, str) or confidence not in CONFIDENCES):
             errors.append(f"{item_id}: confidence must be high|medium|low, got {confidence!r}")
         for field in ("findings", "evidence", "errors"):
             if field in item and not isinstance(item[field], list):
                 errors.append(f"{item_id}: {field} must be an array")
         if isinstance(item.get("evidence"), list):
             for j, ev in enumerate(item["evidence"]):
-                if not isinstance(ev, dict) or "source" not in ev or "claim" not in ev:
-                    errors.append(f"{item_id}: evidence[{j}] must have source and claim")
+                if not isinstance(ev, dict) or any(
+                    not isinstance(ev.get(key), str) or not ev[key].strip()
+                    for key in ("source", "claim")
+                ):
+                    errors.append(f"{item_id}: evidence[{j}] must have non-blank source and claim")
+        item_errors = item.get("errors")
+        if isinstance(item_errors, list):
+            for j, error in enumerate(item_errors):
+                if not isinstance(error, str) or not error.strip():
+                    errors.append(f"{item_id}: errors[{j}] must be a non-blank string")
+            if status == "ok" and item_errors:
+                errors.append(f"{item_id}: ok status must have no errors")
+            elif status in ("failed", "blocked") and not item_errors:
+                errors.append(f"{item_id}: {status} status must include an error")
 
     expected_set = list(dict.fromkeys(expected))
     received_set = set(received)
