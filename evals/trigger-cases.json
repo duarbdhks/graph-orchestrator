@@ -48,6 +48,14 @@
     "should_trigger": true
   },
   {
+    "query": "Run our weekly docs check on the supplied report. Classify it as links, schema, or clean. Run the matching check only, then verify the final report.",
+    "should_trigger": true
+  },
+  {
+    "query": "/graph-orchestrator fix this one typo in README.md.",
+    "should_trigger": true
+  },
+  {
     "query": "What does parseSessionToken in src/auth/session.ts actually do?",
     "should_trigger": false
   },
@@ -61,6 +69,10 @@
   },
   {
     "query": "Extract the CSV, transform the columns, load it into the staging table. Each step needs the previous output.",
+    "should_trigger": false
+  },
+  {
+    "query": "Check this one docs report. If it mentions a broken link, tell me which link it is.",
     "should_trigger": false
   },
   {

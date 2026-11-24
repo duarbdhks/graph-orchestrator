@@ -8,7 +8,9 @@ Important: nothing in this schema executes on its own. Fields like `max_concurre
 
 Worker item shape, parent return, and ledger fields live in `references/execution-contract.md`. Do not duplicate them here.
 
-If `scripts/validate-plan.py` exists, run it on this JSON before handing it over.
+Resolve any routes in the host first. Hand off the selected pending graph and its gates. If work already ran, supply its validated artifact paths in `reads` for each pending consumer. Use `requires` for producers in the handoff.
+
+Build `requires` and `edges` from the same dependencies. Derive `phases` from that graph. If `scripts/validate-plan.py` is available, run it with `--strict-dependencies` before handoff. The default invocation accepts existing plans and checks the union of `requires` and `edges`.
 
 ## Schema
 
@@ -219,6 +221,8 @@ The example below is a complete, validator-accepted graph with a derived phase s
 ```
 
 ## Field notes
+
+**`description`**. State the node's responsibility and how to check its output.
 
 **`requires`**: previous outputs this node consumes, as `node_id.output` or `node_id`. This is the data dependency. If you cannot name what flows, there is no edge.
 

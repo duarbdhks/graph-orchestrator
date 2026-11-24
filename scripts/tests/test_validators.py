@@ -29,6 +29,13 @@ plan_validator = load_validator("validate-plan.py")
 result_validator = load_validator("validate-results.py")
 
 
+def run_validator(name: str, *args: str | Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        [sys.executable, ROOT / "scripts" / name, *args],
+        capture_output=True, text=True, check=False,
+    )
+
+
 class PlanTests(unittest.TestCase):
     def setUp(self):
         self.plan = json.loads((DATA / "plan-valid.json").read_text(encoding="utf-8"))
@@ -99,6 +106,53 @@ class PlanTests(unittest.TestCase):
         example = json.loads(match.group(1))
         self.assertEqual(plan_validator.validate(example), [])
 
+    def run_plan_cli(self, plan, *args):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "plan.json"
+            path.write_text(json.dumps(plan), encoding="utf-8")
+            return run_validator("validate-plan.py", *args, path)
+
+    def test_cli_strict_accepts_matching_and_empty_dependency_sets(self):
+        self.plan["nodes"][1]["requires"] = ["recon", "recon"]
+        self.plan["edges"].reverse()
+        for plan in (self.plan, {"nodes": [{"id": "a"}]}):
+            with self.subTest(nodes=len(plan["nodes"])):
+                proc = self.run_plan_cli(plan, "--strict-dependencies")
+                self.assertEqual(proc.returncode, 0, proc.stderr)
+
+    def test_cli_accepts_legacy_dependencies_and_reports_strict_mismatches(self):
+        nodes = [{"id": "a"}, {"id": "b", "requires": ["a.output"]}, {"id": "c"}]
+        edges = [{"from": "b", "to": "c", "reason": "c consumes b"}]
+        missing_edge = "a -> b missing from edges"
+        missing_requires = "b -> c missing from requires of node c"
+        cases = (
+            ("requires only", {"nodes": nodes}, [missing_edge]),
+            ("edges only", {"nodes": [{"id": "b"}, {"id": "c"}], "edges": edges}, [missing_requires]),
+            ("mixed", {"nodes": nodes, "edges": edges}, [missing_edge, missing_requires]),
+        )
+        for name, plan, diagnostics in cases:
+            with self.subTest(name=name):
+                default = self.run_plan_cli(plan)
+                self.assertEqual(default.returncode, 0, default.stderr)
+                strict = self.run_plan_cli(plan, "--strict-dependencies")
+                self.assertEqual(strict.returncode, 1, strict.stderr)
+                for diagnostic in diagnostics:
+                    self.assertIn(diagnostic, strict.stderr)
+
+    def test_cli_checks_cycle_and_phase_order_across_dependency_sources(self):
+        plan = {
+            "nodes": [{"id": "a", "requires": ["b"]}, {"id": "b"}],
+            "edges": [{"from": "a", "to": "b", "reason": "b consumes a"}],
+            "phases": [
+                {"phase": 0, "mode": "inline", "nodes": ["a"]},
+                {"phase": 1, "mode": "inline", "nodes": ["b"]},
+            ],
+        }
+        proc = self.run_plan_cli(plan)
+        self.assertEqual(proc.returncode, 1, proc.stderr)
+        self.assertIn("cycle detected", proc.stderr)
+        self.assertIn("b -> a violates phase order", proc.stderr)
+
 
 class ResultsTests(unittest.TestCase):
     def setUp(self):
@@ -150,18 +204,37 @@ class ResultsTests(unittest.TestCase):
                     result_validator.load_expected(str(path))
 
     def test_cli_reports_gap_without_traceback(self):
-        proc = subprocess.run(
-            [
-                sys.executable,
-                str(ROOT / "scripts" / "validate-results.py"),
-                str(DATA / "expected-ids.json"),
-                str(DATA / "results-gap.jsonl"),
-            ],
-            capture_output=True, text=True, check=False,
+        proc = run_validator(
+            "validate-results.py", DATA / "expected-ids.json", DATA / "results-gap.jsonl",
         )
         self.assertEqual(proc.returncode, 1)
         self.assertIn("missing ids", proc.stderr)
         self.assertNotIn("Traceback", proc.stderr)
+
+    def test_cli_requires_ok_only_when_requested(self):
+        summary = "expected=3 received=3 missing=0 extra=0\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "results.jsonl"
+            item = self.items[-1]
+            args = (DATA / "expected-ids.json", path)
+            for status in ("ok", "failed", "blocked"):
+                with self.subTest(status=status):
+                    item.update(status=status, errors=[] if status == "ok" else ["unavailable"])
+                    path.write_text(
+                        "".join(json.dumps(row) + "\n" for row in self.items), encoding="utf-8",
+                    )
+                    default = run_validator("validate-results.py", *args)
+                    self.assertEqual(default.returncode, 0, default.stderr)
+                    self.assertEqual(default.stdout, summary + f"ok: {path}\n")
+                    strict = run_validator("validate-results.py", "--require-ok", *args)
+                    if status == "ok":
+                        self.assertEqual(strict.returncode, 0, strict.stderr)
+                        self.assertEqual(strict.stdout, default.stdout)
+                    else:
+                        self.assertEqual(strict.returncode, 1, strict.stderr)
+                        self.assertEqual(strict.stdout, summary)
+                        self.assertIn(item["item_id"], strict.stderr)
+                        self.assertIn(status, strict.stderr)
 
 
 if __name__ == "__main__":

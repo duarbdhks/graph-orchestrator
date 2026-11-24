@@ -1,6 +1,6 @@
 # Execution Contract
 
-Read this before a fan-out. The schemas here are the source of truth. `SKILL.md` states the rule; this file states the shape.
+Read this before fan-out or routing. Use these shapes for worker output and state.
 
 Context is not state. Shared state is these files, not the orchestrator's window.
 
@@ -14,10 +14,18 @@ Context is not state. Shared state is these files, not the orchestrator's window
 | parent return | `item_id`, `status`, `artifact_ref`, summary ≤ 3 lines |
 | gate | `verify` or `approval`. A control stop, not data flow |
 | write_lock | Single-writer bound on one path. Not an edge |
-| fan-in | Join over a cardinality group. Ready when ledger expected vs received is honest |
+| fan-in | Join planned IDs with current ledger rows and item files |
 | rubric | Shared success criteria for every item in the group |
 
-`requires` is ready when the named outputs are ledger `done`. That is readiness. Completeness at fan-in is the join. Do not add fields for either.
+For a `requires` entry, check for ledger `done` and a valid current `output_ref`. A terminal failure is enough to report the outcome at fan-in. Consumers of the required output remain `blocked`.
+
+## Routing
+
+Declare the classifier, the exact string values it can return as `route`, the continuation for each value, and the check the paths share. Keep the classifier inline when it is a small lookup. Put `route` and its supporting evidence in the classifier's item file.
+
+The parent validates the classifier's item file, requires `ok`, and looks up its `route` in the declared table. A missing, ambiguous, or unlisted value fails the classifier item. Record the reason in the ledger and leave its `output_ref` empty.
+
+Expand only the selected continuation. Bind the common join's `requires` to the selected outputs it reads. An explicitly empty continuation passes the classifier's evidence to the join. Derive phases and fix the expected IDs for the active phase before dispatch. Inactive paths stay outside its expected IDs. Apply the same gates to the selected path.
 
 ## Artifact layout
 
@@ -32,7 +40,7 @@ artifacts/graph-orchestrator/<run-id>/
 
 `<run-id>` is a short timestamp, for example `20260826-1530`. Sanitize `<item-id>` for the filesystem: replace `/` with `__`.
 
-Create the directories before the first dispatch. Do not invent a second store in chat, todos, or a planner database.
+Create the directories before the first dispatch. Assign a new path under `items/` for a retry, such as `items/attempt-2/<item-id>.json`. Read only the current `output_ref` when joining results.
 
 ## Parent return
 
@@ -82,7 +90,7 @@ Batch summaries (`summaries/<batch-id>.json`) keep item ids, counts, and concret
 
 ## Ledger
 
-`ledger.jsonl` is the only runtime state for items. One line per item.
+The parent maintains `ledger.jsonl` with one current row per item. Workers write their assigned item files.
 
 ```json
 {
@@ -113,15 +121,16 @@ Worker `status` and ledger `status` are different vocabularies. Map them; do not
 | Moment / worker `status` | Ledger `status` |
 |---|---|
 | before first dispatch | `pending` |
-| dispatch | `running`, `attempt += 1` |
+| dispatch | `running`, `attempt += 1`, clear stale output and evidence refs and error |
 | `ok` | `done`, set `output_ref` |
 | `failed` | `failed`, set `output_ref` and `error` |
 | `blocked` | `blocked`, set `output_ref` and `error` |
-| invalid spawn or missing item file | `failed`, set `error`, do not leave `running` |
+| invalid spawn or invalid or missing item file | `failed`, set `error`, clear `output_ref` |
+| required input cannot be used | `blocked`, record the dependency and reason, leave `attempt` unchanged if undispatched |
 
-Before every fan-in: expected ids vs ledger ids in `done` / `failed` / `blocked`. A line of `38/40` with two named missing ids is a valid ledger query and a valid join result. Do not invent the two missing bodies in prose. Do not start semantic verification until every expected id is `done`, `failed`, or `blocked`.
+At fan-in, use the expected IDs from the active plan and the ledger rows for that scope. Check each `output_ref` for an item file with the matching `item_id` and mapped `status`. Count valid item files as received. Count valid files with `ok` and ledger `done` as successful. Name missing, invalid, failed, and blocked IDs. An error row can explain a missing file. Record a verification verdict separately from these counts.
 
-If `scripts/validate-results.py` exists, run it at fan-in with the expected id list and the **item** JSONL (or a JSONL of the item files). Do not pass `ledger.jsonl` to that script: ledger statuses are not `ok|failed|blocked`. If the script does not exist, do the same expected-vs-received check from the ledger by hand.
+If `scripts/validate-results.py` is available, validate the expected IDs and JSONL built from the current item files. Otherwise, verify those IDs and item shapes directly. For required scopes, use the success check in `references/verification.md`.
 
 ## What this file is not
 
