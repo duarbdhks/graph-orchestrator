@@ -31,14 +31,16 @@ nodes
   classify_handler      cardinality 60, executor subagent, requires recon
   cluster               requires classify_handler.output
   prioritize            inline, requires cluster
-  verify                gate, requires prioritize
-  draft_plan            inline, requires verify
+  verify                inline, requires prioritize.output
+  draft_plan            inline, requires prioritize.output, verify.output
 
 dependencies
   recon.output → classify_handler
   classify_handler.output → cluster
   cluster.output → prioritize
   prioritize.output → verify
+  prioritize.output → draft_plan
+  verify.output → draft_plan
 
 constraints
   none
@@ -61,6 +63,7 @@ Phase 2 (parallel)     60 classify_handler; workers write item files
 Phase 3 (fan-in)       cluster in layers; completeness from the ledger
 Phase 4 (inline)       prioritize
 Phase 5 (verify)       deterministic → semantic → sample; see references/verification.md
+Phase 6 (inline)       draft_plan from priorities and verification findings
 ```
 
 Layer fan-in at 20 to 30 items. A 60-item group is two layers (60 → 3 → 1), not one synthesis over sixty files.
