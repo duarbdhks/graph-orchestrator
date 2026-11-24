@@ -66,7 +66,7 @@ def has_cycle(ids: set[str], edges: list[tuple[str, str]]) -> list[str]:
                 stack.append((neighbor, iter(graph[neighbor])))
     return []
 
-def validate(plan: dict[str, Any]) -> list[str]:
+def validate(plan: dict[str, Any], *, strict_dependencies: bool = False) -> list[str]:
     errors: list[str] = []
     nodes = plan.get("nodes")
     if not isinstance(nodes, list) or not nodes:
@@ -117,6 +117,7 @@ def validate(plan: dict[str, Any]) -> list[str]:
                     errors.append(f"node {nid}: invalid requires entry {ref!r}")
 
     # second pass for requires now that all ids are known
+    requires_pairs: list[tuple[str, str]] = []
     for node in nodes:
         if not isinstance(node, dict):
             continue
@@ -128,12 +129,16 @@ def validate(plan: dict[str, Any]) -> list[str]:
             continue
         for ref in requires:
             dep = node_id_from_ref(ref)
-            if dep and dep not in id_set:
+            if dep is None:
+                continue
+            if dep in id_set:
+                requires_pairs.append((dep, nid))
+            else:
                 errors.append(f"node {nid}: requires unknown node {dep}")
 
     edge_pairs: list[tuple[str, str]] = []
     edges = plan.get("edges", [])
-    if edges is None:
+    if edges is None and not strict_dependencies:
         edges = []
     if not isinstance(edges, list):
         errors.append("edges must be an array")
@@ -153,19 +158,14 @@ def validate(plan: dict[str, Any]) -> list[str]:
             if isinstance(src, str) and isinstance(dst, str) and src in id_set and dst in id_set:
                 edge_pairs.append((src, dst))
 
-    for node in nodes:
-        if not isinstance(node, dict):
-            continue
-        nid = node.get("id")
-        if not isinstance(nid, str) or nid not in id_set:
-            continue
-        requires = node.get("requires", [])
-        if not isinstance(requires, list):
-            continue
-        for ref in requires:
-            dep = node_id_from_ref(ref)
-            if dep and dep in id_set:
-                edge_pairs.append((dep, nid))
+    if strict_dependencies:
+        declared_requires = set(requires_pairs)
+        declared_edges = set(edge_pairs)
+        for src, dst in sorted(declared_requires - declared_edges):
+            errors.append(f"dependency {src} -> {dst} missing from edges")
+        for src, dst in sorted(declared_edges - declared_requires):
+            errors.append(f"dependency {src} -> {dst} missing from requires of node {dst}")
+    edge_pairs.extend(requires_pairs)
 
     constraints = plan.get("constraints", [])
     if constraints is None:
@@ -262,13 +262,15 @@ def validate(plan: dict[str, Any]) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 2:
-        print("usage: validate-plan.py <plan.json>", file=sys.stderr)
+    strict_dependencies = argv[1:2] == ["--strict-dependencies"]
+    args = argv[2:] if strict_dependencies else argv[1:]
+    if len(args) != 1:
+        print("usage: validate-plan.py [--strict-dependencies] <plan.json>", file=sys.stderr)
         return 2
-    path = argv[1]
+    path = args[0]
     try:
         plan = load_plan(path)
-        errors = validate(plan)
+        errors = validate(plan, strict_dependencies=strict_dependencies)
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

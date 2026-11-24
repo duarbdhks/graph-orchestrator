@@ -14,16 +14,16 @@ Run in this order. Skip a later stage only when `SKILL.md` tells you to omit Ver
 
 Cheap, objective, no LLM required.
 
-- expected ids vs received ids (from the ledger)
+- planned IDs, ledger rows, and current item files reconciled per `references/execution-contract.md`
 - duplicate ids
 - item schema: the required keys in `references/execution-contract.md`
 - for code: tests, typecheck, lint — whichever the repo already runs — before any language-model verifier
 
-If `scripts/validate-results.py` exists, use it here on the **item** JSONL, not the ledger. A failed deterministic stage is a gap or a contract break, not a "looks off" judgment. Name the missing or invalid ids. Do not start the semantic stage until every expected id is `done`, `failed`, or `blocked`.
+For a gate that requires every item to succeed, run `scripts/validate-results.py --require-ok <expected-ids> <item-results.jsonl>` with the required IDs and current item files for that gate. Where the script is unavailable, require a valid `ok` result for each required ID. Keep the gate closed when a required item is missing, invalid, failed, or blocked. Report the affected IDs and start the semantic stage only after the deterministic checks pass.
 
 ### 2. Semantic
 
-Re-derive claims from source, in a fresh context that did not produce the work. Give the verifier the claims and the sources, not the synthesis.
+Re-derive claims from source in a fresh context. Give the verifier the claims and the sources. The verifier reads the scoped inputs and writes its verification findings. The parent assigns fixes to the affected producers.
 
 - every finding with Critical severity
 - every High finding that would change the recommendation
@@ -42,7 +42,9 @@ Re-derive at least one `ok`, Low, or Medium item that stage 2 did not re-derive.
 
 Two modes. Pick by what failed, not by preference.
 
-**Node-local redo.** The graph is still right. Redo only the affected nodes, not the whole graph. Re-run deterministic checks on the new outputs. Re-run semantic checks on the changed claims, plus a fresh sample. Cap at 3 attempts.
+**Node-local redo.** When a result fails verification, follow `input_refs` and `requires` to find every consumer of the invalidated output. Clear stale output refs and gate verdicts before scheduling more work. Block consumers until their required inputs are ready again. When the graph still fits, retry affected producers and recompute their consumers. Reuse successful items whose inputs and rubric still match. Recheck gates on the current results, including any approval tied to replaced results. Count at most three dispatches per item in the same run.
+
+If a retry changes a route, re-derive the affected phases and expected IDs. Reconcile any prior writes before dispatching the new path. Keep the affected path blocked while a prior effect is uncertain. Re-run deterministic checks on new outputs, semantic checks for changed claims, and a fresh sample.
 
 **Re-plan.** The rubric or the graph is wrong: the same class of failure returns twice, or two "independent" items actually conflict. Stop. Say what changed. Build a new graph. Do not quietly work around it.
 

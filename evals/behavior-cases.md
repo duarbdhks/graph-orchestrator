@@ -84,6 +84,30 @@ Required: record item 12 as failed, continue the batch, surface the failure at c
 
 Anti-behavior: the whole phase stops because one item errored, discarding completed work.
 
+## Small linear work
+
+Prompt: "/graph-orchestrator fix this one typo in README.md."
+
+Required: load the skill and handle the edit inline. Emit no formal graph and spawn no workers.
+
+## Conditional dispatch
+
+Prompt: "Run our weekly docs check. The classifier can report `links`, `schema`, or `clean`. Carry the evidence for the selected path into the final report." Exercise one result of each label and a missing or unlisted value.
+
+Required: declare the case table before classifying. For `links` and `schema`, dispatch only the matching check and count only its expected IDs. For `clean`, use the classifier's evidence directly. For an invalid value, record a failed classifier and hold its dependent path. If handing off JSON, preserve the selected pending graph and its gates.
+
+## Required failure blocks consumers
+
+Prompt: two required item results arrive with `ok` and `failed`. A downstream task needs both. Another task uses an independent input.
+
+Required: report two received and one successful, with the failed ID. The deterministic gate fails before semantic verification. Keep the consumer blocked and let the independent work run.
+
+## Local retry preserves independent success
+
+Prompt: a check invalidates an item already read by a join and a verifier. Its sibling has unchanged inputs and succeeded.
+
+Required: clear the unusable refs and gate verdicts. Retry the invalid item at a new path and rerun only affected consumers. Reuse the sibling's existing file. When there is a route change, recalculate the affected IDs and hold the new path if a prior effect is uncertain.
+
 ## codex-spawn-uses-default
 
 Prompt: high-stakes Codex run that needs a fresh-context semantic verifier and a final judge. Status reports a running OpenCodex proxy with `opencodex-local` routing. Injection selects a supported model and effort with guidance enabled.

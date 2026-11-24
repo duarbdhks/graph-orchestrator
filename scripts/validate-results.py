@@ -51,7 +51,7 @@ def load_results(path: str) -> list[dict[str, Any]]:
     return items
 
 
-def validate(expected: list[str], items: list[dict[str, Any]]) -> list[str]:
+def validate(expected: list[str], items: list[dict[str, Any]], *, require_ok: bool = False) -> list[str]:
     errors: list[str] = []
     seen: dict[str, int] = {}
     received: list[str] = []
@@ -74,6 +74,8 @@ def validate(expected: list[str], items: list[dict[str, Any]]) -> list[str]:
         status = item.get("status")
         if not isinstance(status, str) or status not in STATUSES:
             errors.append(f"{item_id}: status must be ok|failed|blocked, got {status!r}")
+        elif require_ok and status != "ok":
+            errors.append(f"{item_id}: expected status ok, got {status}")
         confidence = item.get("confidence")
         if "confidence" in item and (not isinstance(confidence, str) or confidence not in CONFIDENCES):
             errors.append(f"{item_id}: confidence must be high|medium|low, got {confidence!r}")
@@ -114,17 +116,19 @@ def validate(expected: list[str], items: list[dict[str, Any]]) -> list[str]:
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) != 3:
+    require_ok = argv[1:2] == ["--require-ok"]
+    args = argv[2:] if require_ok else argv[1:]
+    if len(args) != 2:
         print(
-            "usage: validate-results.py <expected-ids.json|txt> <results.jsonl>",
+            "usage: validate-results.py [--require-ok] <expected-ids.json|txt> <results.jsonl>",
             file=sys.stderr,
         )
         return 2
-    expected_path, results_path = argv[1], argv[2]
+    expected_path, results_path = args
     try:
         expected = load_expected(expected_path)
         items = load_results(results_path)
-        errors = validate(expected, items)
+        errors = validate(expected, items, require_ok=require_ok)
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
